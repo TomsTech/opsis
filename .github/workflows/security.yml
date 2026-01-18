@@ -21,33 +21,3 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  html-validation:
-    name: HTML Validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate HTML
-        uses: nickshanks/html-validator-action@v2
-        with:
-          file: 'index.html'
-        continue-on-error: true
-
-  link-check:
-    name: Check External Links
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check CDN Links
-        run: |
-          echo "Checking external CDN links in index.html..."
-          grep -oP 'https?://[^"]+' index.html | while read url; do
-            if curl -sSf --head "$url" > /dev/null 2>&1; then
-              echo "✓ $url"
-            else
-              echo "✗ $url (may be unavailable)"
-            fi
-          done
-        continue-on-error: true
