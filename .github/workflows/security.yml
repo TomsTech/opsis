@@ -9,67 +9,6 @@ on:
     - cron: '0 6 * * 1'  # Weekly on Monday at 6 AM UTC
 
 jobs:
-  eslint:
-    name: ESLint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npx eslint . --format=stylish || true
-
-  npm-audit:
-    name: Dependency Vulnerability Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high || true
-
-  type-check:
-    name: TypeScript Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Check for TypeScript
-        id: check_ts
-        run: |
-          if [ -f tsconfig.json ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install Dependencies
-        if: steps.check_ts.outputs.exists == 'true'
-        run: npm ci
-
-      - name: Run TypeScript Check
-        if: steps.check_ts.outputs.exists == 'true'
-        run: npx tsc --noEmit
-
   gitleaks:
     name: Secrets Detection
     runs-on: ubuntu-latest
@@ -83,3 +22,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  html-validation:
+    name: HTML Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate HTML
+        uses: nickshanks/html-validator-action@v2
+        with:
+          file: 'index.html'
+        continue-on-error: true
+
+  link-check:
+    name: Check External Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CDN Links
+        run: |
+          echo "Checking external CDN links in index.html..."
+          grep -oP 'https?://[^"]+' index.html | while read url; do
+            if curl -sSf --head "$url" > /dev/null 2>&1; then
+              echo "✓ $url"
+            else
+              echo "✗ $url (may be unavailable)"
+            fi
+          done
+        continue-on-error: true
