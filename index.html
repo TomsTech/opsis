@@ -15,6 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <!-- PDF.js -->
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
+    <!-- jsdiff for text comparison -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.min.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,6 +35,10 @@
             --warning: #d29922;
             --error: #f85149;
             --error-subtle: #f8514933;
+            --diff-add-bg: #2ea04326;
+            --diff-add-border: #3fb950;
+            --diff-remove-bg: #f8514926;
+            --diff-remove-border: #f85149;
         }
 
         html {
@@ -93,6 +99,7 @@
             top: 0;
             z-index: 100;
             transition: box-shadow 0.2s ease;
+            flex-wrap: wrap;
         }
 
         .header.scrolled {
@@ -129,6 +136,39 @@
         .file-info .filename {
             color: var(--text-primary);
             font-weight: 500;
+        }
+
+        /* Stats display */
+        .stats-display {
+            display: none;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .stats-display.visible {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-display .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .stats-display .stat-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .stats-display .stat-divider {
+            color: var(--border);
         }
 
         /* Buttons */
@@ -171,6 +211,17 @@
 
         .btn .icon {
             font-size: 1rem;
+        }
+
+        .btn-accent {
+            background: var(--accent-subtle);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-accent:hover:not(:disabled) {
+            background: var(--accent);
+            color: var(--bg-primary);
         }
 
         /* Loading Overlay */
@@ -336,7 +387,185 @@
             transform: translateY(-2px);
         }
 
-        /* Content Area */
+        /* ==================== SPLIT PANE LAYOUT ==================== */
+
+        .split-container {
+            display: none;
+            height: calc(100vh - 60px);
+        }
+
+        .split-container.visible {
+            display: grid;
+            grid-template-columns: 1fr 4px 1fr;
+        }
+
+        .split-container.single-pane {
+            grid-template-columns: 1fr;
+        }
+
+        .pane {
+            overflow: auto;
+            background: var(--bg-primary);
+            position: relative;
+        }
+
+        .pane-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .pane-header .pane-filename {
+            color: var(--text-primary);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .pane-header .pane-stats {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 0.7rem;
+        }
+
+        .pane-content {
+            padding: 1.5rem;
+            max-width: 100%;
+        }
+
+        .divider {
+            background: var(--border);
+            cursor: col-resize;
+            transition: background 0.15s ease;
+        }
+
+        .divider:hover {
+            background: var(--accent);
+        }
+
+        .divider.dragging {
+            background: var(--accent);
+        }
+
+        /* ==================== DIFF VIEWER ==================== */
+
+        .diff-container {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .diff-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 0;
+        }
+
+        .diff-header-left {
+            color: var(--error);
+        }
+
+        .diff-header-right {
+            color: var(--success);
+        }
+
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+        }
+
+        .diff-table td {
+            padding: 0 0.5rem;
+            vertical-align: top;
+            border-right: 1px solid var(--border);
+        }
+
+        .diff-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .diff-line-num {
+            width: 50px;
+            min-width: 50px;
+            text-align: right;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            user-select: none;
+            font-size: 0.75rem;
+            padding-right: 0.75rem !important;
+        }
+
+        .diff-line-content {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .diff-line-add {
+            background: var(--diff-add-bg);
+        }
+
+        .diff-line-add .diff-line-content::before {
+            content: '+';
+            color: var(--success);
+            margin-right: 0.5rem;
+        }
+
+        .diff-line-remove {
+            background: var(--diff-remove-bg);
+        }
+
+        .diff-line-remove .diff-line-content::before {
+            content: '-';
+            color: var(--error);
+            margin-right: 0.5rem;
+        }
+
+        .diff-line-context {
+            background: var(--bg-primary);
+        }
+
+        .diff-line-context .diff-line-content::before {
+            content: ' ';
+            margin-right: 0.5rem;
+        }
+
+        .diff-stats {
+            display: flex;
+            gap: 1rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .diff-stats .additions {
+            color: var(--success);
+        }
+
+        .diff-stats .deletions {
+            color: var(--error);
+        }
+
+        /* Content Area - Now per-pane */
         .content {
             display: none;
             max-width: 900px;
@@ -618,6 +847,18 @@
                 max-width: 100%;
                 padding: 1.5rem;
             }
+
+            .split-container.visible {
+                grid-template-columns: 1fr;
+            }
+
+            .divider {
+                display: none;
+            }
+
+            .pane:nth-child(3) {
+                border-top: 2px solid var(--border);
+            }
         }
 
         @media (max-width: 768px) {
@@ -634,6 +875,10 @@
             .markdown-body td {
                 padding: 0.375rem 0.5rem;
                 font-size: 0.875rem;
+            }
+
+            .stats-display {
+                display: none !important;
             }
         }
 
@@ -809,9 +1054,22 @@
         <div class="file-info" id="file-info" aria-live="polite" role="status">
             Drop a file or click to open
         </div>
+        <div class="stats-display" id="stats-display" aria-live="polite">
+            <span class="stat-item"><span class="stat-value" id="stat-words">0</span> words</span>
+            <span class="stat-divider">·</span>
+            <span class="stat-item"><span class="stat-value" id="stat-chars">0</span> chars</span>
+            <span class="stat-divider">·</span>
+            <span class="stat-item"><span class="stat-value" id="stat-lines">0</span> lines</span>
+            <span class="stat-divider">·</span>
+            <span class="stat-item">~<span class="stat-value" id="stat-time">0</span> min read</span>
+        </div>
         <button class="btn" onclick="document.getElementById('file-input').click()" aria-label="Open file">
             <span class="icon" aria-hidden="true">📂</span>
             <span class="btn-text">Open</span>
+        </button>
+        <button class="btn" id="compare-btn" onclick="openCompareFile()" aria-label="Open second file for comparison" disabled>
+            <span class="icon" aria-hidden="true">⇄</span>
+            <span class="btn-text">Compare</span>
         </button>
         <button class="btn" id="close-btn" onclick="resetViewer()" aria-label="Close file" disabled>
             <span class="icon" aria-hidden="true">✕</span>
@@ -821,6 +1079,10 @@
             accept=".md,.markdown,.html,.htm,.pdf,.txt,.json,.xml,.csv"
             style="display:none"
             aria-label="Select file to open">
+        <input type="file" id="compare-input"
+            accept=".md,.markdown,.txt,.json,.xml,.csv"
+            style="display:none"
+            aria-label="Select file to compare">
     </header>
 
     <main class="drop-zone" id="main-content"
@@ -840,6 +1102,29 @@
             <li class="format-badge">TXT</li>
         </ul>
     </main>
+
+    <!-- Split Pane Container -->
+    <div class="split-container" id="split-container">
+        <div class="pane" id="pane-left">
+            <div class="pane-header">
+                <span class="pane-filename" id="pane-left-filename">File 1</span>
+                <span class="pane-stats" id="pane-left-stats"></span>
+            </div>
+            <div class="pane-content">
+                <div class="markdown-body" id="pane-left-content"></div>
+            </div>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="pane" id="pane-right">
+            <div class="pane-header">
+                <span class="pane-filename" id="pane-right-filename">File 2</span>
+                <span class="pane-stats" id="pane-right-stats"></span>
+            </div>
+            <div class="pane-content">
+                <div class="markdown-body" id="pane-right-content"></div>
+            </div>
+        </div>
+    </div>
 
     <div class="content" id="content">
         <div class="markdown-body" id="markdown-body"></div>
@@ -885,6 +1170,8 @@
     </div>
 
     <script>
+        // ==================== INITIALIZATION ====================
+
         // Initialize libraries
         mermaid.initialize({
             startOnLoad: false,
@@ -916,14 +1203,38 @@
         // PDF.js setup
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js';
 
+        // ==================== STATE ====================
+
         let pdfDoc = null;
         let pdfPageNum = 1;
         let pdfScale = 1.0;
 
+        // File Manager for multi-pane support
+        const fileManager = {
+            files: [],
+            currentMode: 'single', // 'single', 'split', 'diff'
+
+            addFile(file, content, type) {
+                this.files.push({ file, content, type });
+                return this.files.length - 1;
+            },
+
+            clear() {
+                this.files = [];
+                this.currentMode = 'single';
+            },
+
+            getFile(index) {
+                return this.files[index];
+            }
+        };
+
         // Supported file extensions
         const supportedExts = ['md', 'markdown', 'html', 'htm', 'pdf', 'txt', 'json', 'xml', 'csv'];
+        const textExts = ['md', 'markdown', 'txt', 'json', 'xml', 'csv'];
 
-        // DOM elements
+        // ==================== DOM ELEMENTS ====================
+
         const dropZone = document.querySelector('.drop-zone');
         const content = document.getElementById('content');
         const markdownBody = document.getElementById('markdown-body');
@@ -931,12 +1242,45 @@
         const htmlFrame = document.getElementById('html-frame');
         const fileInfo = document.getElementById('file-info');
         const fileInput = document.getElementById('file-input');
+        const compareInput = document.getElementById('compare-input');
         const loadingOverlay = document.getElementById('loading-overlay');
         const closeBtn = document.getElementById('close-btn');
+        const compareBtn = document.getElementById('compare-btn');
         const shortcutHint = document.querySelector('.shortcut-hint');
         const pdfShortcuts = document.getElementById('pdf-shortcuts');
+        const statsDisplay = document.getElementById('stats-display');
+        const splitContainer = document.getElementById('split-container');
+        const divider = document.getElementById('divider');
 
-        // Toast notification system
+        // ==================== STATS CALCULATION ====================
+
+        function calculateStats(text) {
+            const chars = text.length;
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const lines = text.split('\n').length;
+            const readTime = Math.max(1, Math.ceil(words / 200)); // ~200 wpm average
+            return { chars, words, lines, readTime };
+        }
+
+        function updateStats(text) {
+            const stats = calculateStats(text);
+            document.getElementById('stat-words').textContent = stats.words.toLocaleString();
+            document.getElementById('stat-chars').textContent = stats.chars.toLocaleString();
+            document.getElementById('stat-lines').textContent = stats.lines.toLocaleString();
+            document.getElementById('stat-time').textContent = stats.readTime;
+            statsDisplay.classList.add('visible');
+        }
+
+        function hideStats() {
+            statsDisplay.classList.remove('visible');
+        }
+
+        function formatStatsCompact(stats) {
+            return `${stats.words.toLocaleString()} words · ${stats.lines} lines`;
+        }
+
+        // ==================== TOAST NOTIFICATIONS ====================
+
         function showToast(message, type = 'info') {
             const existing = document.querySelector('.toast');
             if (existing) existing.remove();
@@ -953,7 +1297,8 @@
             loadingOverlay.classList.toggle('visible', show);
         }
 
-        // Responsive PDF scaling
+        // ==================== RESPONSIVE PDF SCALING ====================
+
         function getResponsivePDFScale() {
             const width = window.innerWidth;
             if (width <= 480) return 0.8;
@@ -961,7 +1306,8 @@
             return 1.0;
         }
 
-        // Drag and drop handlers with proper tracking
+        // ==================== DRAG AND DROP ====================
+
         let dragCounter = 0;
 
         document.addEventListener('dragenter', (e) => {
@@ -1004,7 +1350,13 @@
             if (file) loadFile(file);
         });
 
-        // Keyboard shortcuts
+        compareInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) loadCompareFile(file);
+        });
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'o') {
                 e.preventDefault();
@@ -1026,12 +1378,14 @@
             }
         });
 
-        // Header scroll shadow
+        // ==================== HEADER SCROLL SHADOW ====================
+
         window.addEventListener('scroll', () => {
             document.querySelector('.header').classList.toggle('scrolled', window.scrollY > 10);
         });
 
-        // Auto-hide shortcut hint
+        // ==================== AUTO-HIDE SHORTCUT HINT ====================
+
         let shortcutHintTimer = setTimeout(() => {
             shortcutHint.classList.add('hidden');
         }, 15000);
@@ -1040,6 +1394,41 @@
             clearTimeout(shortcutHintTimer);
             shortcutHint.classList.add('hidden');
         }, { once: true });
+
+        // ==================== SPLIT PANE DIVIDER ====================
+
+        let isDragging = false;
+
+        divider.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            divider.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const container = splitContainer;
+            const rect = container.getBoundingClientRect();
+            const offset = e.clientX - rect.left;
+            const percentage = (offset / rect.width) * 100;
+
+            if (percentage > 20 && percentage < 80) {
+                container.style.gridTemplateColumns = `${percentage}% 4px ${100 - percentage - 0.5}%`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                divider.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // ==================== FILE LOADING ====================
 
         function loadFile(file) {
             const ext = file.name.split('.').pop().toLowerCase();
@@ -1053,8 +1442,12 @@
             fileInfo.innerHTML = `<span class="filename">${escapeHtml(file.name)}</span> (${formatSize(file.size)})`;
             closeBtn.disabled = false;
 
+            // Enable compare button for text-based formats
+            compareBtn.disabled = !textExts.includes(ext);
+
             hideAll();
             showLoading(true);
+            fileManager.clear();
 
             if (ext === 'pdf') {
                 loadPDF(file);
@@ -1067,12 +1460,133 @@
             }
         }
 
+        function openCompareFile() {
+            compareInput.click();
+        }
+
+        async function loadCompareFile(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (!textExts.includes(ext)) {
+                showToast('Comparison only supported for text files', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const file2Content = await file.text();
+                const file1 = fileManager.getFile(0);
+
+                if (!file1) {
+                    showToast('No primary file loaded', 'error');
+                    showLoading(false);
+                    return;
+                }
+
+                // Show diff view
+                showDiffView(file1.file.name, file1.content, file.name, file2Content);
+                showLoading(false);
+            } catch (e) {
+                showLoading(false);
+                showToast('Failed to load comparison file: ' + e.message, 'error');
+            }
+        }
+
+        // ==================== DIFF VIEW ====================
+
+        function showDiffView(name1, content1, name2, content2) {
+            hideAll();
+
+            fileManager.currentMode = 'diff';
+            fileInfo.innerHTML = `Comparing: <span class="filename">${escapeHtml(name1)}</span> ↔ <span class="filename">${escapeHtml(name2)}</span>`;
+
+            const diff = Diff.diffLines(content1, content2);
+
+            let additions = 0;
+            let deletions = 0;
+            let leftLineNum = 1;
+            let rightLineNum = 1;
+
+            let tableRows = '';
+
+            diff.forEach(part => {
+                const lines = part.value.split('\n');
+                // Remove last empty line from split
+                if (lines[lines.length - 1] === '') lines.pop();
+
+                lines.forEach(line => {
+                    if (part.added) {
+                        additions++;
+                        tableRows += `
+                            <tr class="diff-line-add">
+                                <td class="diff-line-num"></td>
+                                <td class="diff-line-num">${rightLineNum++}</td>
+                                <td class="diff-line-content">${escapeHtml(line)}</td>
+                            </tr>
+                        `;
+                    } else if (part.removed) {
+                        deletions++;
+                        tableRows += `
+                            <tr class="diff-line-remove">
+                                <td class="diff-line-num">${leftLineNum++}</td>
+                                <td class="diff-line-num"></td>
+                                <td class="diff-line-content">${escapeHtml(line)}</td>
+                            </tr>
+                        `;
+                    } else {
+                        tableRows += `
+                            <tr class="diff-line-context">
+                                <td class="diff-line-num">${leftLineNum++}</td>
+                                <td class="diff-line-num">${rightLineNum++}</td>
+                                <td class="diff-line-content">${escapeHtml(line)}</td>
+                            </tr>
+                        `;
+                    }
+                });
+            });
+
+            const diffHtml = `
+                <div class="diff-stats">
+                    <span class="additions">+${additions} additions</span>
+                    <span class="deletions">-${deletions} deletions</span>
+                </div>
+                <div class="diff-container">
+                    <div class="diff-header">
+                        <span class="diff-header-left">${escapeHtml(name1)}</span>
+                        <span class="diff-header-right">${escapeHtml(name2)}</span>
+                    </div>
+                    <table class="diff-table">
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            markdownBody.innerHTML = diffHtml;
+            hideStats();
+
+            content.style.display = 'block';
+            content.style.maxWidth = '100%';
+            requestAnimationFrame(() => {
+                content.classList.add('visible');
+            });
+
+            window.scrollTo(0, 0);
+        }
+
+        // ==================== VIEW MANAGEMENT ====================
+
         function hideAll() {
             dropZone.classList.add('hidden');
             content.classList.remove('visible');
+            content.style.maxWidth = '900px';
             pdfContainer.classList.remove('visible');
             htmlFrame.classList.remove('visible');
+            splitContainer.classList.remove('visible');
             pdfShortcuts.style.display = 'none';
+            hideStats();
         }
 
         function resetViewer() {
@@ -1083,13 +1597,22 @@
             htmlFrame.src = '';
             pdfDoc = null;
             fileInput.value = '';
+            compareInput.value = '';
             closeBtn.disabled = true;
+            compareBtn.disabled = true;
             showLoading(false);
+            fileManager.clear();
         }
+
+        // ==================== MARKDOWN LOADING ====================
 
         async function loadMarkdown(file) {
             try {
                 const text = await file.text();
+
+                // Store in file manager
+                fileManager.addFile(file, text, 'text');
+
                 let html = marked.parse(text);
 
                 // Process Mermaid blocks
@@ -1108,6 +1631,9 @@
 
                 // Add copy buttons to code blocks
                 addCopyButtons();
+
+                // Update stats
+                updateStats(text);
 
                 showLoading(false);
                 content.style.display = 'block';
@@ -1155,6 +1681,8 @@
             });
         }
 
+        // ==================== HTML LOADING ====================
+
         function loadHTML(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -1169,15 +1697,22 @@
             reader.readAsText(file);
         }
 
+        // ==================== JSON LOADING ====================
+
         async function loadJSON(file) {
             try {
                 const text = await file.text();
+
+                // Store in file manager
+                fileManager.addFile(file, text, 'json');
+
                 try {
                     const json = JSON.parse(text);
                     const formatted = JSON.stringify(json, null, 2);
                     markdownBody.innerHTML = `<pre><code class="language-json">${escapeHtml(formatted)}</code></pre>`;
                     hljs.highlightAll();
                     addCopyButtons();
+                    updateStats(formatted);
                 } catch (parseError) {
                     const errorLine = parseError.message.match(/position (\d+)/)?.[1];
                     const hint = errorLine ? ` (near character ${errorLine})` : '';
@@ -1187,6 +1722,7 @@
                         </div>
                         <pre><code>${escapeHtml(text)}</code></pre>
                     `;
+                    updateStats(text);
                 }
                 showLoading(false);
                 content.style.display = 'block';
@@ -1199,6 +1735,8 @@
                 showToast('Failed to load file: ' + e.message, 'error');
             }
         }
+
+        // ==================== PDF LOADING ====================
 
         async function loadPDF(file) {
             try {
@@ -1278,6 +1816,8 @@
             renderPDFPage();
         }
 
+        // ==================== UTILITIES ====================
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -1290,26 +1830,72 @@
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
-        // Handle file from URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileUrl = urlParams.get('file');
-        if (fileUrl) {
+        // ==================== URL PARAMETERS ====================
+
+        async function handleUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileUrl = urlParams.get('file');
+            const filesParam = urlParams.get('files');
+
+            const urls = [];
+
+            if (fileUrl) {
+                urls.push(fileUrl);
+            }
+
+            if (filesParam) {
+                // Support comma-separated URLs
+                urls.push(...filesParam.split(',').map(u => u.trim()).filter(u => u));
+            }
+
+            if (urls.length === 0) return;
+
             showLoading(true);
-            fetch(fileUrl)
-                .then(r => {
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    return r.blob();
-                })
-                .then(blob => {
-                    const filename = fileUrl.split('/').pop() || 'file';
+
+            try {
+                if (urls.length === 1) {
+                    // Single file mode
+                    const response = await fetch(urls[0]);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const blob = await response.blob();
+                    const filename = urls[0].split('/').pop().split('?')[0] || 'file';
                     const file = new File([blob], filename);
                     loadFile(file);
-                })
-                .catch(e => {
+                } else if (urls.length >= 2) {
+                    // Compare mode - load first two files
+                    const [response1, response2] = await Promise.all([
+                        fetch(urls[0]),
+                        fetch(urls[1])
+                    ]);
+
+                    if (!response1.ok) throw new Error(`HTTP ${response1.status} for file 1`);
+                    if (!response2.ok) throw new Error(`HTTP ${response2.status} for file 2`);
+
+                    const [text1, text2] = await Promise.all([
+                        response1.text(),
+                        response2.text()
+                    ]);
+
+                    const name1 = urls[0].split('/').pop().split('?')[0] || 'file1';
+                    const name2 = urls[1].split('/').pop().split('?')[0] || 'file2';
+
+                    // Store first file in manager
+                    fileManager.addFile({ name: name1 }, text1, 'text');
+
+                    closeBtn.disabled = false;
+                    fileInfo.innerHTML = `<span class="filename">${escapeHtml(name1)}</span>`;
+
+                    showDiffView(name1, text1, name2, text2);
                     showLoading(false);
-                    showToast(`Failed to load file from URL: ${e.message}`, 'error');
-                });
+                }
+            } catch (e) {
+                showLoading(false);
+                showToast(`Failed to load file from URL: ${e.message}`, 'error');
+            }
         }
+
+        // Initialize URL param handling
+        handleUrlParams();
     </script>
 </body>
 </html>

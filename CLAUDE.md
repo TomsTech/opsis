@@ -8,8 +8,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **ὄψις** (opsis) — Greek for "sight, view, appearance"
 
+Opsis is a zero-dependency universal document viewer that renders Markdown, HTML, PDF, JSON, XML, CSV, and plain text files in the browser. It's a single HTML file (~1900 lines) with all functionality self-contained, designed to be deployed on any static host (GitHub Pages, Cloudflare Pages, Netlify).
+
 ### Key Features
-- {{TODO: Add key features}}
+- **Universal file support**: Markdown (with Mermaid diagrams), HTML, PDF, JSON, XML, CSV, TXT
+- **Text statistics**: Word count, character count, line count, reading time estimate
+- **File comparison**: Side-by-side diff view for text-based files with GitHub-style +/- highlighting
+- **URL parameters**: Load files via `?file=url` or compare files via `?files=url1,url2`
+- **Syntax highlighting**: Automatic code highlighting via highlight.js
+- **Dark theme**: GitHub-style dark mode throughout
+- **Responsive**: Mobile-friendly with touch targets and adaptive layouts
+- **Accessibility**: ARIA labels, skip links, keyboard navigation (Ctrl+O, Esc, arrow keys for PDF)
+- **No backend required**: All processing happens client-side
 
 ---
 
@@ -17,7 +27,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 opsis/
-{{TODO: Add project structure}}
+├── index.html              # Single-file application (all HTML/CSS/JS)
+├── CLAUDE.md               # This file
+├── README.md               # User-facing documentation
+├── LICENSE                 # MIT license
+├── .github/
+│   ├── AGENTS.md           # AI agent instructions
+│   ├── renovate.json       # Dependency updates
+│   └── workflows/
+│       ├── docflow.yml     # Documentation automation
+│       └── security.yml    # Security scanning
+├── docs/
+│   ├── INDEX.md            # Documentation index
+│   └── generated/          # Auto-generated docs (DocFlow)
+│       ├── INDEX.md
+│       ├── STATISTICS.md
+│       └── diagrams/
+│           └── FOLDER_STRUCTURE.md
+└── docflow.config.json     # DocFlow configuration
 ```
 
 > For full directory tree, see [docs/generated/diagrams/FOLDER_STRUCTURE.md](docs/generated/diagrams/FOLDER_STRUCTURE.md)
@@ -26,7 +53,7 @@ opsis/
 
 | File | Purpose |
 |------|---------|
-| {{main_file}} | Main entry point |
+| `index.html` | Complete single-file application - viewer UI, all CSS styles, and JavaScript logic |
 
 ---
 
@@ -34,21 +61,43 @@ opsis/
 
 | Name | Purpose |
 |------|---------|
-| {{TODO}} | {{TODO}} |
+| `fileManager` | Object managing loaded files, modes ('single', 'split', 'diff'), and file content |
+| `loadFile(file)` | Entry point for all file loading - routes to format-specific loaders |
+| `loadMarkdown(file)` | Renders markdown via marked.js, processes Mermaid blocks |
+| `loadPDF(file)` | Renders PDF via PDF.js with pagination and zoom controls |
+| `loadJSON(file)` | Parses and syntax-highlights JSON with error reporting |
+| `loadHTML(file)` | Renders HTML in sandboxed iframe |
+| `showDiffView(name1, content1, name2, content2)` | Displays line-by-line diff using jsdiff library |
+| `calculateStats(text)` | Computes words, chars, lines, reading time |
+| `updateStats(text)` | Updates stats display in header |
+| `handleUrlParams()` | Processes `?file=` and `?files=` URL parameters |
 
 ---
 
 ## Configuration
 
-{{TODO: Document configuration options}}
+This is a zero-configuration application. All settings are embedded in the HTML file.
+
+**Customizable via code:**
+- CSS variables in `:root` for theming (lines 22-42)
+- Marked.js options in `marked.setOptions()` for markdown parsing
+- Mermaid options in `mermaid.initialize()` for diagram styling
+- `supportedExts` array for supported file extensions
+- `textExts` array for file types that support comparison
 
 ---
 
 ## Dependencies
 
+All dependencies are loaded via CDN (no npm/bundler required):
+
 | Dependency | Version | Purpose |
 |------------|---------|---------|
-| {{TODO}} | {{version}} | {{purpose}} |
+| [marked.js](https://marked.js.org/) | latest | Markdown → HTML parsing |
+| [highlight.js](https://highlightjs.org/) | v11 | Syntax highlighting for code blocks |
+| [Mermaid](https://mermaid.js.org/) | v10 | Diagram rendering (flowcharts, sequence, etc.) |
+| [PDF.js](https://mozilla.github.io/pdf.js/) | v3 | PDF rendering to canvas |
+| [jsdiff](https://github.com/kpdecker/jsdiff) | v5.2.0 | Text diff computation for comparison mode |
 
 ---
 
@@ -62,33 +111,69 @@ For detailed file counts and repository statistics, see [docs/generated/STATISTI
 ## Common Commands
 
 ```bash
-# Run tests
-echo "No tests configured"
+# No build step required - just open index.html in a browser
+
+# Run local server for testing (Python)
+python -m http.server 8000
+
+# Run local server (Node.js)
+npx serve .
+
+# Test URL parameters
+# ?file=https://raw.githubusercontent.com/user/repo/main/README.md
+# ?files=url1,url2 (for diff view)
 ```
 
 ---
 
 ## CI/CD
 
-{{TODO: Document CI/CD pipeline}}
+The repository uses GitHub Actions for automation:
+
+| Workflow | Purpose |
+|----------|---------|
+| `docflow.yml` | Auto-generates documentation via DocFlow (folder structure, statistics) |
+| `security.yml` | Security scanning and vulnerability checks |
+
+**Deployment:** Push to `master` branch. If hosted on GitHub Pages, the site auto-deploys.
 
 ---
 
 ## Known Issues / Gotchas
 
-{{TODO: Document known issues}}
+- **CORS restrictions**: Loading files via `?file=` requires the remote server to allow cross-origin requests
+- **Large files**: PDF rendering and text processing happen in the main thread; very large files may cause brief UI freezes
+- **Mermaid complexity**: Extremely complex Mermaid diagrams may render slowly
+- **PDF text selection**: Text in PDFs cannot be selected (rendered to canvas)
+- **Split pane on mobile**: The draggable divider doesn't work on narrow screens; falls back to stacked layout
 
 ---
 
 ## Development Guidelines
 
 ### Making Changes
-- Run tests before committing
-- Follow existing code patterns and naming conventions
-- Update documentation if adding new features
+- This is a single-file application - all changes go in `index.html`
+- Keep CSS organized by section (use `/* ========== SECTION ========== */` comments)
+- Keep JavaScript organized by function category with section headers
+- Test on multiple browsers (Chrome, Firefox, Safari) and screen sizes
+- Maintain dark theme consistency using CSS variables
 
 ### Testing
-Run tests: `echo "No tests configured"`
+No automated tests currently. Manual testing checklist:
+1. Drop file → Markdown, JSON, PDF, HTML each work
+2. Stats display shows for text files
+3. Compare button works for text files
+4. `?file=url` loads remote file
+5. `?files=url1,url2` shows diff view
+6. Keyboard shortcuts work (Ctrl+O, Esc, arrow keys in PDF)
+7. Mobile layout is usable
+
+### Adding New File Types
+1. Add extension to `supportedExts` array
+2. If text-based and should support comparison, add to `textExts` array
+3. Add format badge to HTML drop zone
+4. Add routing in `loadFile()` function
+5. Create `loadXXX(file)` function following existing patterns
 
 ---
 
