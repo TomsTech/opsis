@@ -758,6 +758,44 @@
                 grid-column: 1 / -1;
             }
         }
+
+        /* Print styles */
+        @media print {
+            .header,
+            .shortcut-hint,
+            .btn,
+            .pdf-controls,
+            .loading-overlay,
+            .toast {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .content {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            .markdown-body {
+                color: #000;
+                background: white;
+            }
+
+            .markdown-body pre,
+            .markdown-body code {
+                background: #f6f8fa;
+                border: 1px solid #d0d7de;
+            }
+
+            .markdown-body a {
+                color: #0969da;
+                text-decoration: underline;
+            }
+        }
     </style>
 </head>
 <body>
@@ -785,7 +823,7 @@
             aria-label="Select file to open">
     </header>
 
-    <main class="drop-zone" id="drop-zone" id="main-content"
+    <main class="drop-zone" id="main-content"
           role="region"
           aria-label="File upload area"
           tabindex="0">
@@ -886,7 +924,7 @@
         const supportedExts = ['md', 'markdown', 'html', 'htm', 'pdf', 'txt', 'json', 'xml', 'csv'];
 
         // DOM elements
-        const dropZone = document.getElementById('drop-zone');
+        const dropZone = document.querySelector('.drop-zone');
         const content = document.getElementById('content');
         const markdownBody = document.getElementById('markdown-body');
         const pdfContainer = document.getElementById('pdf-container');
