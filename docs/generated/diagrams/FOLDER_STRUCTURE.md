@@ -15,7 +15,9 @@
 ├── docs
 │   ├── generated
 │   │   ├── diagrams
-│   │   └── .gitkeep
+│   │   ├── .gitkeep
+│   │   ├── INDEX.md
+│   │   └── STATISTICS.md
 │   └── INDEX.md
 ├── .gitignore
 ├── CLAUDE.md
@@ -24,7 +26,7 @@
 ├── docflow.config.json
 └── index.html
 
-6 directories, 12 files
+6 directories, 14 files
 ```
 
 ## Key Directories
