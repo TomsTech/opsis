@@ -214,14 +214,16 @@
         }
 
         .btn-accent {
-            background: var(--accent-subtle);
+            background: linear-gradient(135deg, rgba(88,166,255,0.15) 0%, rgba(88,166,255,0.25) 100%);
             border-color: var(--accent);
             color: var(--accent);
         }
 
         .btn-accent:hover:not(:disabled) {
-            background: var(--accent);
-            color: var(--bg-primary);
+            background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(56,139,253,0.4);
+            transform: translateY(-1px);
         }
 
         /* Loading Overlay */
@@ -265,29 +267,30 @@
             bottom: 4rem;
             left: 50%;
             transform: translateX(-50%) translateY(0);
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 1.25rem;
             border-radius: 8px;
             font-size: 0.875rem;
             z-index: 300;
             animation: toastIn 0.3s ease;
             max-width: 90vw;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
 
         .toast-error {
-            background: var(--error-subtle);
-            border: 1px solid var(--error);
+            border-left-color: var(--error);
             color: #ff7b72;
         }
 
         .toast-info {
-            background: var(--accent-subtle);
-            border: 1px solid var(--border);
+            border-left-color: var(--accent);
             color: var(--accent);
         }
 
         .toast-success {
-            background: rgba(63, 185, 80, 0.15);
-            border: 1px solid var(--success);
+            border-left-color: var(--success);
             color: var(--success);
         }
 
@@ -305,16 +308,20 @@
             align-items: center;
             justify-content: center;
             min-height: calc(100vh - 60px);
-            padding: 2rem;
+            padding: 3rem;
             margin: 1rem;
             border: 2px dashed var(--border);
             border-radius: 16px;
             transition: all 0.3s ease;
             cursor: pointer;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .drop-zone:hover {
-            border-color: var(--text-secondary);
+            border-color: var(--accent);
+            background: rgba(88,166,255,0.03);
         }
 
         .drop-zone:focus-visible {
