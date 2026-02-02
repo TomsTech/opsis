@@ -23,10 +23,11 @@
 ├── CLAUDE.md
 ├── LICENSE
 ├── README.md
+├── crash-recovery-audit-2026-02-02.html
 ├── docflow.config.json
 └── index.html
 
-6 directories, 14 files
+6 directories, 15 files
 ```
 
 ## Key Directories
